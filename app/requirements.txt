@@ -1,0 +1,7 @@
+flask
+flask[async]
+werkzeug
+pdf2image
+opencv-python 
+pyzbar 
+numpy
