@@ -1,10 +1,12 @@
-import asyncio
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
 from pyzbar import pyzbar
+import asyncio
+import subprocess
 import cv2
 import os
+import time
 from PIL import Image
 
 input_pdf_path = "/pdf/"
@@ -35,39 +37,53 @@ app = Flask(__name__, template_folder='/app')
 @app.route("/barcode", methods=['GET', 'POST'])
 async def upload_file():
     if request.method == 'POST':
+
+        barcode_data = request.form.get('data')
         if 'the_file' not in request.files:
-            return "Файл не выбран."
+          return "Файл не выбран."
         file = request.files['the_file']
         
         if file.filename.endswith('.pdf'):
+
+            start_time = time.time()
+
             filename = secure_filename(file.filename)
             file_path = input_pdf_path + filename
             file.save(file_path)
 
             images = await asyncio.to_thread(convert_from_path, file_path)
-
+            barcodes_decoded=[]
             for i, image in enumerate(images):
                 image_path = output_images_folder + f"{filename}_{i}.jpg"
                 image.save(image_path)
-
-            image_path = output_images_folder + f"{filename}.jpg"
-            barcodes = await find_barcodes(image_path)
-
-            if barcodes == []:
-                await resize_image(image_path, image_path, 2.0)
                 barcodes = await find_barcodes(image_path)
-
                 if barcodes == []:
-                    image.save(error_scan_images + f"{filename}.jpg")
-                    return 'barcode not readible', 400
-
-            code_barcode = barcodes[0].data.decode('utf-8').strip("'")
-
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            return f"<p>{code_barcode}</p>"
+                    await resize_image(image_path, image_path, 2.0)
+                    barcodes = await find_barcodes(image_path)
+                    if barcodes == []:
+                        image.save(error_scan_images + f"{filename}.jpg")
+                        barcodes_decoded.append("error")
+                code_barcode = barcodes[0].data.decode('utf-8').strip("'")
+                barcodes_decoded.append(code_barcode)
+            # if os.path.exists(image_path):
+            #     os.remove(image_path)
+            # if os.path.exists(file_path):
+            #     os.remove(file_path)
+            
+            end_time = time.time()
+    #         process = await asyncio.create_subprocess_exec(
+    #             'python', 'minio_upload.py',
+    #             '--param1', barcodes_decoded,
+    #             '--param2', barcode_data,
+    #             '--param3', image_path,         
+    #             stdout=subprocess.PIPE,
+    #             stderr=subprocess.PIPE
+    # )
+            # stdout, stderr = await process.communicate()
+            execution_time = end_time - start_time
+            print("Время выполнения функции:", execution_time, "секунд")
+            
+            return f"<p>{barcodes_decoded}</p><p>{barcode_data}</p><p>{execution_time} секунд"#</p><p>{stderr}</p>" 
     else:
         return render_template('upload.html')
 

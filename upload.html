@@ -1,12 +1,33 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>Загрузка файла</title>
-</head>
-<body>
-	<form method="POST" action="/" enctype="multipart/form-data">
-		<input type="file" name="the_file" accept=".pdf">
-		<input type="submit" value="Отправить">
-	</form>
-</body>
+	<head>
+		<title>Загрузка файла</title>
+	</head>
+  <body>
+    <h2>Upload PDF File</h2>
+    <form action="/barcode" method="post" enctype="multipart/form-data">
+      <input type="file" name="the_file"><br><br>
+      <label for="data">Data:</label>
+      <input type="submit" value="Отправить">
+    </form>
+  </body>
 </html>
+<!DOCTYPE html>
+<!-- <html>
+	<head>
+		<title>Загрузка файла</title>
+	</head>
+  <body>
+    <h2>Upload PDF File</h2>
+    <form action="/barcode" method="post" enctype="multipart/form-data">
+      <input type="file" name="the_file"><br><br>
+      <label for="type">Type:</label>
+      <input type="text" name="type"><br><br>
+      <label for="date">Date:</label>
+      <input type="date" name="date"><br><br>
+      <label for="name">Name:</label>
+      <input type="text" name="name"><br><br>
+      <input type="submit" value="Отправить">
+    </form>
+  </body>
+</html> -->
