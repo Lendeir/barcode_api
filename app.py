@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
 from pyzbar import pyzbar
 import asyncio
+import requests
 import subprocess
 import cv2
 import os
@@ -34,8 +35,8 @@ async def find_barcodes(image_path):
 app = Flask(__name__)
 app = Flask(__name__, template_folder='/app')
 
-@app.route("/barcode", methods=['GET', 'POST'])
-async def upload_file():
+@app.route("/barcode/<upload_name>", methods=['GET', 'POST'])
+async def upload_file(upload_name):
     if request.method == 'POST':
 
         barcode_data = request.form.get('data')
@@ -44,8 +45,6 @@ async def upload_file():
         file = request.files['the_file']
         
         if file.filename.endswith('.pdf'):
-
-            start_time = time.time()
 
             filename = secure_filename(file.filename)
             file_path = input_pdf_path + filename
@@ -63,29 +62,44 @@ async def upload_file():
                     if barcodes == []:
                         image.save(error_scan_images + f"{filename}.jpg")
                         barcodes_decoded.append("error")
+                        # url = 'http://localhost:8000/precombain_without_barcode/'
+                        # response = requests.get(url)
                 code_barcode = barcodes[0].data.decode('utf-8').strip("'")
                 barcodes_decoded.append(code_barcode)
+
+                url = f'http://localhost:8000/precombain/70622240475034085304442561301835614842884^70622240475034085304442561301835614842884^{upload_name}^{filename}.jpg'
+                requests.get(url)
+            
             # if os.path.exists(image_path):
             #     os.remove(image_path)
             # if os.path.exists(file_path):
             #     os.remove(file_path)
+
             
-            end_time = time.time()
-    #         process = await asyncio.create_subprocess_exec(
-    #             'python', 'minio_upload.py',
-    #             '--param1', barcodes_decoded,
-    #             '--param2', barcode_data,
-    #             '--param3', image_path,         
-    #             stdout=subprocess.PIPE,
-    #             stderr=subprocess.PIPE
-    # )
-            # stdout, stderr = await process.communicate()
-            execution_time = end_time - start_time
-            print("Время выполнения функции:", execution_time, "секунд")
-            
-            return f"<p>{barcodes_decoded}</p><p>{barcode_data}</p><p>{execution_time} секунд"#</p><p>{stderr}</p>" 
+            return f"<p>{barcodes_decoded}</p><p>{len(barcodes_decoded)}</p>"#</p><p>{stderr}</p>" 
     else:
         return render_template('upload.html')
+@app.route("/precombain/<data>", methods=['GET'])
+def precombain(data):
+    split_data=data.split("^")
+    file_path = split_data[0] 
+    id = hex(int(split_data[1]))[:-3]
+    upload_name= split_data[2] 
+    name = split_data[3]
+    # запускаем асинронный субпроцесс обработки
+    async def run_subprocess():
+        command = ['python', 'minio_upload.py', file_path, id, upload_name,name]
+        # Создаем субпроцесс
+        await asyncio.create_subprocess_exec(*command)
+
+    # Запускаем субпроцесс в асинхронном цикле событий asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run_subprocess())
+    return f"{id}"
+
+# @app.route("/precombain_without_barcode/<file_path>", methods=['GET'])
+# def precombain_error():
+
 
 if __name__ == '__main__':
     app.run(app.run(host='0.0.0.0', port=8000))
