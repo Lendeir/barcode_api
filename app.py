@@ -1,13 +1,13 @@
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
+from urllib.parse import quote
+from urllib.parse import unquote
 from pyzbar import pyzbar
 import asyncio
 import requests
-import subprocess
 import cv2
 import os
-import time
 from PIL import Image
 
 input_pdf_path = "/pdf/"
@@ -35,11 +35,11 @@ async def find_barcodes(image_path):
 app = Flask(__name__)
 app = Flask(__name__, template_folder='/app')
 
-@app.route("/barcode/<upload_name>", methods=['GET', 'POST'])
-async def upload_file(upload_name):
+@app.route("/barcode/", methods=['GET', 'POST'])
+async def upload_file():
     if request.method == 'POST':
 
-        barcode_data = request.form.get('data')
+        upload_name = request.form.get('name')
         if 'the_file' not in request.files:
           return "Файл не выбран."
         file = request.files['the_file']
@@ -67,7 +67,7 @@ async def upload_file(upload_name):
                 code_barcode = barcodes[0].data.decode('utf-8').strip("'")
                 barcodes_decoded.append(code_barcode)
 
-                url = f'http://localhost:8000/precombain/70622240475034085304442561301835614842884^70622240475034085304442561301835614842884^{upload_name}^{filename}.jpg'
+                url = f'http://localhost:8000/precombain/'+quote(f'{code_barcode}^"{image_path}"^{upload_name}^{filename}_{i}.jpg')
                 requests.get(url)
             
             # if os.path.exists(image_path):
@@ -81,21 +81,33 @@ async def upload_file(upload_name):
         return render_template('upload.html')
 @app.route("/precombain/<data>", methods=['GET'])
 def precombain(data):
+    data=unquote(data)
     split_data=data.split("^")
-    file_path = split_data[0] 
-    id = hex(int(split_data[1]))[:-3]
+    id = hex(int(split_data[0]))[:-3]
+    file_path = split_data[1].strip('"') 
     upload_name= split_data[2] 
     name = split_data[3]
     # запускаем асинронный субпроцесс обработки
     async def run_subprocess():
         command = ['python', 'minio_upload.py', file_path, id, upload_name,name]
         # Создаем субпроцесс
-        await asyncio.create_subprocess_exec(*command)
+        process = await asyncio.create_subprocess_exec(*command)
+        stdout, stderr = await process.communicate()
+        return f"{print(stdout)}"
 
     # Запускаем субпроцесс в асинхронном цикле событий asyncio
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_subprocess())
-    return f"{id}"
+
+
+#     def run_subprocess():
+#         command = ['python', 'minio_upload.py', file_path, id, upload_name, name]
+#         # Запуск субпроцесса
+#         subprocess.run(command)
+
+# # Вызов функции для запуска субпроцесса
+#     run_subprocess()
+#     return print("lol")
 
 # @app.route("/precombain_without_barcode/<file_path>", methods=['GET'])
 # def precombain_error():
@@ -103,3 +115,4 @@ def precombain(data):
 
 if __name__ == '__main__':
     app.run(app.run(host='0.0.0.0', port=8000))
+

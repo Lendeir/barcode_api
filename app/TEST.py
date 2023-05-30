@@ -1,37 +1,67 @@
-import io
-import sys
-from minio import Minio
-# Получаем аргументы командной строки
-def v(id,file_path,upload_name,name):
-    # id = int(sys.argv[1])
-    # file_path = sys.argv[2]
-    # upload_name = sys.argv[3]
-    # name = sys.argv[4]
-    minio_endpoint = 'localhost:9000'
-    minio_access_key = 'Ymn9qL26cMJ9eiJG9QAr'
-    minio_secret_key = 'LlMiKXlK0IlLPoaQSVziEs1iBNmE6jV8nJIb33aQ'
 
+import io
+from minio import Minio
+
+def create_folder(minio_client, bucket_name, folder_path):
+    folder_name = f"{folder_path}/"
+    result = minio_client.put_object(bucket_name, folder_name, io.BytesIO(b""), 0)
+    print(f"created folder: {folder_name}")
+
+def create_empty_object(minio_client, bucket_name, folder_path, object_name):
+    object_path = f"{folder_path}/{object_name}"
+    result = minio_client.put_object(bucket_name, object_path, io.BytesIO(b"hello"), 5)
+    print(
+        "created {0} object; etag: {1}, version-id: {2}".format(
+            result.object_name, result.etag, result.version_id,
+        )
+    )
+
+import os
+
+def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
+    object_path = f"{folder_path}/{object_name}"
+    
+    if not os.path.isfile(file_path):
+        print(f"Error: File '{file_path}' does not exist.")
+        return
+    
+    if not os.access(file_path, os.R_OK):
+        print(f"Error: No read permission for file '{file_path}'.")
+        return
+    
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        print(f"Error: File '{file_path}' is empty.")
+        return
+    
+    with open(file_path, 'rb') as file_data:
+        result = minio_client.put_object(bucket_name, object_path, file_data, file_size)
+        print(
+            "uploaded {0} file to {1}; etag: {2}, version-id: {3}".format(
+                file_path, result.object_name, result.etag, result.version_id,
+            )
+        )
+
+def v(id, file_path, upload_name, name):
+    minio_endpoint = 'minio:9000'
+    minio_access_key = 'jJ729BHnnL9SOFukANhm'
+    minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
     minio_bucket_name = upload_name
-    path = f'{id}'
-    object_name = name  # Имя объекта, под которым он будет сохранен в ведре
-    # Инициализация клиента MinIO
-    minio_client = Minio(minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
+    folder_path = str(id)
+
     try:
-        # Проверяем существование ведра, и, если оно не существует, создаем его
+        minio_client = Minio(minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
+        
         if not minio_client.bucket_exists(minio_bucket_name):
             minio_client.make_bucket(minio_bucket_name)
-    except:
-        print("error create bucket")
-    try:
-        # Create the folder by uploading an empty object with a trailing slash
-        minio_client.put_object(minio_bucket_name, path, io.BytesIO(b''))
-        print(f"Folder '{path}' created successfully in bucket '{minio_bucket_name}'!")
-    except:
-        print("error create folder")
-    try:
-        # Загружаем файл в ведро
-        minio_client.fput_object(minio_bucket_name, object_name, file_path)
-        print(f"Файл {file_path} успешно добавлен в ведро {minio_bucket_name} с именем {object_name}")
-    except:
-        print("error upload file")
-v("/result/",879589840433799967438659843263883536039940,"test1323","1.pdf.jpg")
+            
+        create_folder(minio_client, minio_bucket_name, folder_path)
+        create_empty_object(minio_client, minio_bucket_name, folder_path, "empty-object")
+        upload_file(minio_client, minio_bucket_name, folder_path, file_path, name)
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+v(879589840433799967438659843263883536039940, "/app/1.jpg", "test5", "1.jpg")
+# v(879589840433799967438659843263883536039940, "C:/Users/i.miniakhmetov/Desktop/app/app/1.jpg", "test5", "1.jpg")
+
