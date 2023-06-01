@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template
 from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
-from urllib.parse import quote
-from urllib.parse import unquote
 from flask import Flask, request
 from pyzbar import pyzbar
 import asyncio
@@ -53,7 +51,6 @@ def create_empty_object(minio_client, bucket_name, folder_path, object_name):
         )
     )
 
-import os
 
 def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
     object_path = f"{folder_path}/{object_name}"
@@ -107,7 +104,9 @@ def v(id, file_path, upload_name, name):
 @app.route("/barcode/", methods=['GET', 'POST'])
 async def upload_file():
     if request.method == 'POST':
-
+        barcodes_decoded=[]
+        paths=[]
+        file_names=[]
         upload_name = request.form.get('name')
         if 'the_file' not in request.files:
           return "Файл не выбран."
@@ -120,34 +119,49 @@ async def upload_file():
             file.save(file_path)
 
             images = await asyncio.to_thread(convert_from_path, file_path)
-            barcodes_decoded=[]
+            
             for i, image in enumerate(images):
                 image_path = output_images_folder + f"{filename}_{i}.jpg"
                 image.save(image_path)
                 barcodes = await find_barcodes(image_path)
+
+                paths.append(image_path)
+                file_names.append(f"{filename}_{i}.jpg")
+                
                 if barcodes == []:
                     await resize_image(image_path, image_path, 2.0)
                     barcodes = await find_barcodes(image_path)
                     if barcodes == []:
                         image.save(error_scan_images + f"{filename}.jpg")
                         barcodes_decoded.append("error")
-                        # url = 'http://localhost:8000/precombain_without_barcode/'
-                        # response = requests.get(url)
                 code_barcode = barcodes[0].data.decode('utf-8').strip("'")
                 barcodes_decoded.append(code_barcode)
-                v(code_barcode,image_path,upload_name,filename)
+ 
 
+ 
+            
             # if os.path.exists(image_path):
             #     os.remove(image_path)
             # if os.path.exists(file_path):
             #     os.remove(file_path)
 
-            
-            return f"<p>{barcodes_decoded}</p><p>{len(barcodes_decoded)}</p>"#</p><p>{stderr}</p>" 
+            for i in range(len(barcodes_decoded)):
+                path_list=f'/result/2.pdf_{i}.jpg'
+                file_name=f'2.pdf_{i}.jpg'
+                v(barcodes_decoded[i],path_list,upload_name,file_name)    
+        return f"<p>{barcodes_decoded}</p><p>{paths}</p><p>{file_names}</p>"#</p><p>{stderr}</p>" 
     else:
         return render_template('upload.html')
 
 
+
+
+
+
+
+
+if __name__ == '__main__':
+    app.run(app.run(host='0.0.0.0', port=8000))
 
 # def precombain(id,file_path,upload_name,name):
 #     id = hex(int(id))[:-3]
@@ -184,11 +198,3 @@ async def upload_file():
 #     # Запускаем субпроцесс в асинхронном цикле событий asyncio
 #     loop = asyncio.get_event_loop()
 #     loop.run_until_complete(run_subprocess())
-
-
-
-
-
-if __name__ == '__main__':
-    app.run(app.run(host='0.0.0.0', port=8000))
-
