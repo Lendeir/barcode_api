@@ -65,7 +65,7 @@ for item in client.list_objects(bucket_name, prefix=base_folder, recursive=True)
 
 # Обход папок и создание PDF-файлов
 for folder in folders:
-    folder_name = os.path.basename(folder.rstrip("/"))
+    folder_name = os.path.basename(folder.strip("/"))
     folder_images = get_images_in_folder(folder)
     try:
         create_pdf(folder_name, folder_images)

@@ -56,7 +56,7 @@ def v(id, file_path, upload_name, name):
             minio_client.make_bucket(minio_bucket_name)
             
         create_folder(minio_client, minio_bucket_name, folder_path)
-        create_empty_object(minio_client, minio_bucket_name, folder_path, "empty-object")
+        #create_empty_object(minio_client, minio_bucket_name, folder_path, "empty-object")
         upload_file(minio_client, minio_bucket_name, folder_path, file_path, name)
 
     except Exception as e:
@@ -68,6 +68,6 @@ for i in range(len(list)):
     print(path_list)
     print(file_name)
 
-    v(list[i],path_list, "114", file_name)
+    v(list[i],path_list, "120", file_name)
 # v(879589840433799967438659843263883536039940, "C:/Users/i.miniakhmetov/Desktop/app/app/1.jpg", "test5", "1.jpg")
 

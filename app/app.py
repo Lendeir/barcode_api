@@ -136,26 +136,19 @@ async def upload_file():
                         barcodes_decoded.append("error")
                 code_barcode = barcodes[0].data.decode('utf-8').strip("'")
                 barcodes_decoded.append(code_barcode)
- 
-
- 
-            
-            # if os.path.exists(image_path):
-            #     os.remove(image_path)
-            # if os.path.exists(file_path):
-            #     os.remove(file_path)
 
             for i in range(len(barcodes_decoded)):
                 path_list=f'/result/2.pdf_{i}.jpg'
                 file_name=f'2.pdf_{i}.jpg'
                 v(barcodes_decoded[i],path_list,upload_name,file_name)    
-        return f"<p>{barcodes_decoded}</p><p>{paths}</p><p>{file_names}</p>"#</p><p>{stderr}</p>" 
+        return f"<p>{barcodes_decoded}</p>" 
     else:
         return render_template('upload.html')
 
-
-
-
+@app.route("/data_upload/", methods=['GET', 'POST'])
+async def upload_data():
+    if request.method == 'POST':
+        upload_name = request.form.get('name')
 
 
 
