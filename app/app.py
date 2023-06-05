@@ -1,4 +1,6 @@
-from flask import Flask, request, render_template
+import json
+import subprocess
+from flask import Flask, jsonify, request, render_template
 from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
 from flask import Flask, request
@@ -37,64 +39,64 @@ app = Flask(__name__)
 app = Flask(__name__, template_folder='/app')
 
 # +++++++++++++++++++++++++++++++++++++++++++++++
-def create_folder(minio_client, bucket_name, folder_path):
-    folder_name = f"{folder_path}/"
-    result = minio_client.put_object(bucket_name, folder_name, io.BytesIO(b""), 0)
-    print(f"created folder: {folder_name}")
+# def create_folder(minio_client, bucket_name, folder_path):
+#     folder_name = f"{folder_path}/"
+#     result = minio_client.put_object(bucket_name, folder_name, io.BytesIO(b""), 0)
+#     print(f"created folder: {folder_name}")
 
-def create_empty_object(minio_client, bucket_name, folder_path, object_name):
-    object_path = f"{folder_path}/{object_name}"
-    result = minio_client.put_object(bucket_name, object_path, io.BytesIO(b"hello"), 5)
-    print(
-        "created {0} object; etag: {1}, version-id: {2}".format(
-            result.object_name, result.etag, result.version_id,
-        )
-    )
+# def create_empty_object(minio_client, bucket_name, folder_path, object_name):
+#     object_path = f"{folder_path}/{object_name}"
+#     result = minio_client.put_object(bucket_name, object_path, io.BytesIO(b"hello"), 5)
+#     print(
+#         "created {0} object; etag: {1}, version-id: {2}".format(
+#             result.object_name, result.etag, result.version_id,
+#         )
+#     )
 
 
-def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
-    object_path = f"{folder_path}/{object_name}"
+# def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
+#     object_path = f"{folder_path}/{object_name}"
     
-    if not os.path.isfile(file_path):
-        print(f"Error: File '{file_path}' does not exist.")
-        return
-    
-    if not os.access(file_path, os.R_OK):
-        print(f"Error: No read permission for file '{file_path}'.")
-        return
-    
-    file_size = os.path.getsize(file_path)
-    if file_size == 0:
-        print(f"Error: File '{file_path}' is empty.")
-        return
-    
-    with open(file_path, 'rb') as file_data:
-        result = minio_client.put_object(bucket_name, object_path, file_data, file_size)
-        print(
-            "uploaded {0} file to {1}; etag: {2}, version-id: {3}".format(
-                file_path, result.object_name, result.etag, result.version_id,
-            )
-        )
+#     if not os.path.isfile(file_path):
+#         print(f"Error: File '{file_path}' does not exist.")
 
-def v(id, file_path, upload_name, name):
-    minio_endpoint = 'minio:9000'
-    minio_access_key = 'jJ729BHnnL9SOFukANhm'
-    minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
-    minio_bucket_name = upload_name
-    folder_path = str(id)
+    
+#     if not os.access(file_path, os.R_OK):
+#         print(f"Error: No read permission for file '{file_path}'.")
 
-    try:
-        minio_client = Minio(minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
+    
+#     file_size = os.path.getsize(file_path)
+#     if file_size == 0:
+#         print(f"Error: File '{file_path}' is empty.")
+
+    
+#     with open(file_path, 'rb') as file_data:
+#         result = minio_client.put_object(bucket_name, object_path, file_data, file_size)
+#         print(
+#             "uploaded {0} file to {1}; etag: {2}, version-id: {3}".format(
+#                 file_path, result.object_name, result.etag, result.version_id,
+#             )
+#         )
+
+# def v(id, file_path, upload_name, name):
+#     minio_endpoint = 'minio:9000'
+#     minio_access_key = 'jJ729BHnnL9SOFukANhm'
+#     minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
+#     minio_bucket_name = upload_name
+#     folder_path = str(id)
+
+#     try:
+#         minio_client = Minio(minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
         
-        if not minio_client.bucket_exists(minio_bucket_name):
-            minio_client.make_bucket(minio_bucket_name)
+#         if not minio_client.bucket_exists(minio_bucket_name):
+#             minio_client.make_bucket(minio_bucket_name)
             
-        create_folder(minio_client, minio_bucket_name, folder_path)
-        create_empty_object(minio_client, minio_bucket_name, folder_path, "empty-object")
-        upload_file(minio_client, minio_bucket_name, folder_path, file_path, name)
+#         create_folder(minio_client, minio_bucket_name, folder_path)
+#         create_empty_object(minio_client, minio_bucket_name, folder_path, "empty-object")
+#         upload_file(minio_client, minio_bucket_name, folder_path, file_path, name)
 
-    except Exception as e:
-        print(f"Error: {str(e)}")
+#     except Exception as e:
+#         return (f"Error: {str(e)}")
 # +++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -134,21 +136,44 @@ async def upload_file():
                     if barcodes == []:
                         image.save(error_scan_images + f"{filename}.jpg")
                         barcodes_decoded.append("error")
-                code_barcode = barcodes[0].data.decode('utf-8').strip("'")
-                barcodes_decoded.append(code_barcode)
+                try:
+                    code_barcode = barcodes[0].data.decode('utf-8').strip("'")
+                    barcodes_decoded.append(code_barcode)
+                except:
+                    print()
+            # for i in range(len(barcodes_decoded)):
+            #     v(hex(int(barcodes_decoded[i]))[:-3],paths[i],upload_name,file_names[i])    
+                
+        # +++++++++++
 
-            for i in range(len(barcodes_decoded)):
-                path_list=f'/result/2.pdf_{i}.jpg'
-                file_name=f'2.pdf_{i}.jpg'
-                v(barcodes_decoded[i],path_list,upload_name,file_name)    
-        return f"<p>{barcodes_decoded}</p>" 
+        data = {'barcodes_decoded': barcodes_decoded, 'paths': paths, 'file_names': file_names,'upload_name': upload_name}
+        json_data = json.dumps(data)
+
+        # Запуск внешнего скрипта с передачей данных через stdin
+        cmd = ['python', '/app/minio_upload.py']
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        process.communicate(input=json_data.encode())
+
+        # return 'External code executed.'
+
+        # +++++++++++
+        
+        return f"<p>{barcodes_decoded}</p><p>{file_names}</p><p>{paths}</p>" 
     else:
         return render_template('upload.html')
 
 @app.route("/data_upload/", methods=['GET', 'POST'])
 async def upload_data():
     if request.method == 'POST':
-        upload_name = request.form.get('name')
+        try:
+            data = request.get_json()  # Получение JSON-данных из запроса
+            # Дальнейшая обработка полученных данных
+            print(data)
+            return jsonify({'message': 'Data received'}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return jsonify({'message': 'Method not allowed'}), 405
 
 
 

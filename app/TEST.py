@@ -61,13 +61,17 @@ def v(id, file_path, upload_name, name):
 
     except Exception as e:
         print(f"Error: {str(e)}")
-list=['70622240475034085304442561301835614842884', '130706221835882856613644498205329273716739', '130706221835882856613644498205329273716739', '130706221835882856613644498205329273716737', '130706221835882856613644498205329273716737', '629695406412629666858686271928847057354753', '629695406412629666858686271928847057354753']
-for i in range(len(list)):
-    path_list=f'/result/2.pdf_{i}.jpg'
-    file_name=f'2.pdf_{i}.jpg'
-    print(path_list)
-    print(file_name)
 
-    v(list[i],path_list, "120", file_name)
-# v(879589840433799967438659843263883536039940, "C:/Users/i.miniakhmetov/Desktop/app/app/1.jpg", "test5", "1.jpg")
+
+list=['70622240475034085304442561301835614842884', '130706221835882856613644498205329273716739', '130706221835882856613644498205329273716739', '130706221835882856613644498205329273716737', '130706221835882856613644498205329273716737', '629695406412629666858686271928847057354753', '629695406412629666858686271928847057354753']
+# path_list=['/result/2.pdf_0.jpg', '/result/2.pdf_1.jpg', '/result/2.pdf_2.jpg', '/result/2.pdf_3.jpg', '/result/2.pdf_4.jpg', '/result/2.pdf_5.jpg', '/result/2.pdf_6.jpg']
+# file_name=['2.pdf_0.jpg', '2.pdf_1.jpg', '2.pdf_2.jpg', '2.pdf_3.jpg', '2.pdf_4.jpg', '2.pdf_5.jpg', '2.pdf_6.jpg']
+# for i in range(len(list)):
+#     path_list=f'/result/2.pdf_{i}.jpg'
+#     file_name=f'2.pdf_{i}.jpg'
+#     print(path_list)
+#     print(file_name)
+
+#     v(list[i],path_list, "120000", file_name)
+v(879589840433799967438659843263883536039940, "C:/Users/i.miniakhmetov/Desktop/app/app/1.jpg", "test5", "1.jpg")
 

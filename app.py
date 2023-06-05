@@ -62,21 +62,13 @@ async def upload_file():
                     if barcodes == []:
                         image.save(error_scan_images + f"{filename}.jpg")
                         barcodes_decoded.append("error")
-                        # url = 'http://localhost:8000/precombain_without_barcode/'
-                        # response = requests.get(url)
                 code_barcode = barcodes[0].data.decode('utf-8').strip("'")
                 barcodes_decoded.append(code_barcode)
 
                 url = f'http://localhost:8000/precombain/'+quote(f'{code_barcode}^"{image_path}"^{upload_name}^{filename}_{i}.jpg')
                 requests.get(url)
-            
-            # if os.path.exists(image_path):
-            #     os.remove(image_path)
-            # if os.path.exists(file_path):
-            #     os.remove(file_path)
-
-            
-            return f"<p>{barcodes_decoded}</p><p>{len(barcodes_decoded)}</p>"#</p><p>{stderr}</p>" 
+  
+            return f"<p>{barcodes_decoded}</p><p>{len(barcodes_decoded)}</p>"
     else:
         return render_template('upload.html')
 @app.route("/precombain/<data>", methods=['GET'])
@@ -98,20 +90,6 @@ def precombain(data):
     # Запускаем субпроцесс в асинхронном цикле событий asyncio
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_subprocess())
-
-
-#     def run_subprocess():
-#         command = ['python', 'minio_upload.py', file_path, id, upload_name, name]
-#         # Запуск субпроцесса
-#         subprocess.run(command)
-
-# # Вызов функции для запуска субпроцесса
-#     run_subprocess()
-#     return print("lol")
-
-# @app.route("/precombain_without_barcode/<file_path>", methods=['GET'])
-# def precombain_error():
-
 
 if __name__ == '__main__':
     app.run(app.run(host='0.0.0.0', port=8000))

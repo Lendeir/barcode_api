@@ -1,3 +1,5 @@
+# нужно запускать с передачей upload name
+
 from minio import Minio
 import os
 import shutil
@@ -7,7 +9,7 @@ def v():
     minio_access_key = 'jJ729BHnnL9SOFukANhm'
     minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
     download_folder = '/making/'
-    minio_bucket_name = 'listtest'
+    minio_bucket_name = '222222222'
 
     try:
         minio_client = Minio(minio_endpoint, access_key=minio_access_key, secret_key=minio_secret_key, secure=False)
@@ -32,8 +34,7 @@ def v():
                     os.makedirs(file_path)
                 minio_client.fget_object(minio_bucket_name,obj.object_name, download_folder + name[0]+"/"+name[1])
                 print(f"Файл {obj.object_name} успешно скачан в {file_path}")
-
-# print(v())
+    return folders
 
 from fpdf import FPDF
 import os
@@ -55,6 +56,8 @@ def convert_images_to_pdf(folder_path, output_path):
     print("PDF файл успешно создан!")
 
 
-
+folders=v()
+for i in range(len(folders)):
+    convert_images_to_pdf(f'/making/{folders[i]}', f'/app/{folders[i].strip("/")}.pdf')
+    
 # Вызываем функцию для преобразования изображений в PDF
-convert_images_to_pdf("/making/629695406412629666858686271928847057354753", "/app/result.pdf")
