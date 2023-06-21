@@ -31,8 +31,8 @@ def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
 
 def v(id, file_path, upload_name, name):
     minio_endpoint = 'minio:9000'
-    minio_access_key = 'jJ729BHnnL9SOFukANhm'
-    minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
+    minio_access_key = 'cKrvC8E4mbUhH6vuC2dx'
+    minio_secret_key = 'J7UvQS0DzFeGEYzEDA7pflEryoIyGsiHzr8VVU6G'
     minio_bucket_name = upload_name
     folder_path = str(id)
 
@@ -58,15 +58,14 @@ input_data = json.loads(data)
 
 # Получение трех массивов из входных данных
 list = input_data['barcodes_decoded']
-path_list = input_data['paths']
 file_name = input_data['file_names']
 upload_name = input_data['upload_name']
 for i in range(len(list)):
-    # path_list=f'/result/2.pdf_{i}.jpg'
-    # file_name=f'2.pdf_{i}.jpg'
+    path="/result/"+upload_name+"/"+file_name[i]
+
     try:
-        v(list[i],path_list[i], upload_name, file_name[i])
+        v(list[i],path, upload_name, file_name[i])
     except:
-        v("withoutbarcode",path_list[i], upload_name, file_name[i])
+        v("withoutbarcode",path, upload_name, file_name[i])
 # v(879589840433799967438659843263883536039940, "C:/Users/i.miniakhmetov/Desktop/app/app/1.jpg", "test5", "1.jpg")
 
