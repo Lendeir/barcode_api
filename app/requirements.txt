@@ -8,3 +8,4 @@ numpy
 minio
 requests
 fpdf
+zipfile

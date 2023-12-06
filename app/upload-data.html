@@ -2,14 +2,42 @@
 <html>
 <head>
     <title>Data Upload</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('form').submit(function(event) {
+                event.preventDefault();  // Предотвращаем отправку формы по умолчанию
+
+                // Получаем значения полей формы
+                var name = $('#name').val();
+                var jsonData = {
+                    'name': name
+                };
+
+                // Отправляем AJAX-запрос с данными в формате JSON
+                $.ajax({
+                    type: 'POST',
+                    url: '/data_upload/',
+                    contentType: 'application/json',
+                    data: JSON.stringify(jsonData),
+                    success: function(response) {
+                        console.log(response);
+                        // Обрабатываем успешный ответ
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(xhr.responseText);
+                        // Обрабатываем ошибку
+                    }
+                });
+            });
+        });
+    </script>
 </head>
 <body>
-    <h2>Data Upload</h2>
-    <form action="/data_upload/" method="POST" enctype="multipart/form-data">
+    <h1>Data Upload</h1>
+    <form>
         <label for="name">Name:</label>
-        <input type="text" id="name" name="name"><br><br>
-        <label for="data">Data:</label>
-        <textarea id="data" name="data"></textarea><br><br>
+        <input type="text" name="name" id="name" required><br><br>
         <input type="submit" value="Upload">
     </form>
 </body>

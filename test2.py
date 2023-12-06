@@ -3,8 +3,8 @@ from minio import Minio
 from fpdf import FPDF
 
 minio_endpoint = 'minio:9000'
-minio_access_key = 'cKrvC8E4mbUhH6vuC2dx'
-minio_secret_key = 'J7UvQS0DzFeGEYzEDA7pflEryoIyGsiHzr8VVU6G'
+minio_access_key = 'jJ729BHnnL9SOFukANhm'
+minio_secret_key = 'xVq3xfL0QIa1doYHxZhcdpbqoBZxmecKHH7dCcrK'
 # Параметры подключения к серверу MinIO
 minio_url =  minio_endpoint
 access_key = minio_access_key
