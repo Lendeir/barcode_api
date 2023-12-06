@@ -1,13 +1,16 @@
-from flask import Flask, request, render_template
+import json
+import subprocess
+from flask import Flask, jsonify, request, render_template, send_file
 from werkzeug.utils import secure_filename
 from pdf2image import convert_from_path
-from urllib.parse import quote
-from urllib.parse import unquote
+from flask import Flask, request
 from pyzbar import pyzbar
 import asyncio
-import requests
+from minio import Minio
 import cv2
+import io
 import os
+import sys
 from PIL import Image
 
 input_pdf_path = "/pdf/"
@@ -17,28 +20,31 @@ error_scan_images = '/error_scan/'
 async def resize_image(input_image_path, output_image_path, scale_factor):
     img = Image.open(input_image_path)
     width, height = img.size
-    print(width)
     width = int(width * scale_factor)
     height = int(height * scale_factor)
     img = img.resize((width, height))
     width, height = img.size
-    print(width)
     img = img.convert("RGB")
     img.save(output_image_path)
 
 async def find_barcodes(image_path):
     image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    barcodes = pyzbar.decode(gray)
+    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # barcodes = pyzbar.decode(gray)
+    barcodes = pyzbar.decode(image)
+    
     return barcodes
 
 app = Flask(__name__)
 app = Flask(__name__, template_folder='/app')
 
+
 @app.route("/barcode/", methods=['GET', 'POST'])
 async def upload_file():
     if request.method == 'POST':
-
+        barcodes_decoded=[]
+        paths=[]
+        file_names=[]
         upload_name = request.form.get('name')
         if 'the_file' not in request.files:
           return "Файл не выбран."
@@ -51,46 +57,201 @@ async def upload_file():
             file.save(file_path)
 
             images = await asyncio.to_thread(convert_from_path, file_path)
-            barcodes_decoded=[]
+            
             for i, image in enumerate(images):
-                image_path = output_images_folder + f"{filename}_{i}.jpg"
-                image.save(image_path)
-                barcodes = await find_barcodes(image_path)
+                image_path = f"{i}.jpg"
+                image.save(output_images_folder + image_path)
+                barcodes = await find_barcodes(output_images_folder + image_path)
+
+                paths.append(output_images_folder+image_path)
+                file_names.append(f"{i}.jpg")
+                
                 if barcodes == []:
-                    await resize_image(image_path, image_path, 2.0)
-                    barcodes = await find_barcodes(image_path)
+                    await resize_image(output_images_folder + image_path, output_images_folder + image_path, 2.0)
+                    barcodes = await find_barcodes(output_images_folder + image_path)
                     if barcodes == []:
                         image.save(error_scan_images + f"{filename}.jpg")
                         barcodes_decoded.append("error")
-                code_barcode = barcodes[0].data.decode('utf-8').strip("'")
-                barcodes_decoded.append(code_barcode)
+                try:
+                    code_barcode = barcodes[0].data.decode('utf-8').strip("'")
+                    code_barcode=hex(int(code_barcode))#[:-3]
+                    barcodes_decoded.append(code_barcode)
+                except:
+                    print()
+        data = {'barcodes_decoded': barcodes_decoded, 'paths': paths, 'file_names': file_names,'upload_name': upload_name}
+        data_for_back={'barcodes_decoded': barcodes_decoded}
+        json_data = json.dumps(data)
+        json_data_s = json.dumps(data_for_back)
+        # Запуск внешнего скрипта с передачей данных через stdin
+        cmd = ['python', '/app/minio_upload.py']
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        process.communicate(input=json_data.encode())
 
-                url = f'http://localhost:8000/precombain/'+quote(f'{code_barcode}^"{image_path}"^{upload_name}^{filename}_{i}.jpg')
-                requests.get(url)
-  
-            return f"<p>{barcodes_decoded}</p><p>{len(barcodes_decoded)}</p>"
+        # return 'External code executed.'
+
+        # +++++++++++
+        
+        return f"<p>{barcodes_decoded}</p><p>{paths}</p><p>{file_names}</p>" 
     else:
         return render_template('upload.html')
-@app.route("/precombain/<data>", methods=['GET'])
-def precombain(data):
-    data=unquote(data)
-    split_data=data.split("^")
-    id = hex(int(split_data[0]))[:-3]
-    file_path = split_data[1].strip('"') 
-    upload_name= split_data[2] 
-    name = split_data[3]
-    # запускаем асинронный субпроцесс обработки
-    async def run_subprocess():
-        command = ['python', 'minio_upload.py', file_path, id, upload_name,name]
-        # Создаем субпроцесс
-        process = await asyncio.create_subprocess_exec(*command)
-        stdout, stderr = await process.communicate()
-        return f"{print(stdout)}"
+    
 
-    # Запускаем субпроцесс в асинхронном цикле событий asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_subprocess())
+
+@app.route("/data_upload/", methods=['GET', 'POST'])
+async def upload_data():
+    if request.method == 'POST':
+        upload_name = request.form.get('name')
+        try:
+            data = request.get_json()  # Получение JSON-данных из запроса
+            # Дальнейшая обработка полученных данных
+            print(data)
+
+            # Save JSON data to a file
+            with open('data.json', 'w') as file:
+                json.dump(data, file)
+
+            return jsonify({'message': 'Data received and saved'}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        return render_template('upload-data.html')
+    
+
+
+@app.route("/download_file/", methods=['GET'])
+def download_file():
+    return send_file("/pdf/2_merged.pdf", as_attachment=True)
 
 if __name__ == '__main__':
     app.run(app.run(host='0.0.0.0', port=8000))
 
+
+
+
+
+
+
+
+
+
+
+# import json
+# import subprocess
+# from flask import Flask, jsonify, request, render_template, send_file
+# from werkzeug.utils import secure_filename
+# from pdf2image import convert_from_path
+# from flask import Flask, request
+# from pyzbar import pyzbar
+# import asyncio
+# from minio import Minio
+# import cv2
+# import io
+# import os
+# from PIL import Image
+
+# input_pdf_path = "/pdf/"
+# output_images_folder = '/result/'
+# error_scan_images = '/error_scan/'
+
+# def maybe(value):
+#     return lambda func: None if value is None else func(value)
+
+# async def resize_image(input_image_path, output_image_path, scale_factor):
+#     img = Image.open(input_image_path)
+#     width, height = img.size
+#     width = int(width * scale_factor)
+#     height = int(height * scale_factor)
+#     img = img.resize((width, height))
+#     width, height = img.size
+#     img = img.convert("RGB")
+#     img.save(output_image_path)
+
+# def find_barcodes(image_path):
+#     image = cv2.imread(image_path)
+#     barcodes = pyzbar.decode(image)
+#     return barcodes
+
+# def save_data(json_data):
+#     cmd = ['python', '/app/minio_upload.py']
+#     process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+#     process.communicate(input=json_data.encode())
+
+# app = Flask(__name__)
+# app = Flask(__name__, template_folder='/app')
+
+# @app.route("/barcode/", methods=['GET', 'POST'])
+# async def upload_file():
+#     if request.method == 'POST':
+#         upload_name = request.form.get('name')
+#         file = request.files.get('the_file')
+
+#         async def process_file(file):
+#             if file.filename.endswith('.pdf'):
+#                 filename = secure_filename(file.filename)
+#                 file_path = input_pdf_path + filename
+#                 file.save(file_path)
+#                 loop = asyncio.get_event_loop()
+#                 images = await loop.run_in_executor(None, convert_from_path, file_path)
+
+#                 async def process_image(image, i):
+#                     image_path = f"{i}.jpg"
+#                     image.save(output_images_folder + image_path)
+#                     barcodes = maybe(await loop.run_in_executor(None, find_barcodes, output_images_folder + image_path))
+#                     if not barcodes:
+#                         await resize_image(output_images_folder + image_path, output_images_folder + image_path, 2.0)
+#                         barcodes = maybe(await loop.run_in_executor(None, find_barcodes, output_images_folder + image_path))
+#                         if not barcodes:
+#                             image.save(error_scan_images + f"{filename}.jpg")
+#                             return "error"
+#                     code_barcode = barcodes[0].data.decode('utf-8').strip("'")
+#                     code_barcode = hex(int(code_barcode))
+#                     return code_barcode
+
+#                 async def process_images():
+#                     barcodes_decoded = []
+#                     paths = []
+#                     file_names = []
+#                     for i, image in enumerate(images):
+#                         result = await process_image(image, i)
+#                         if result == "error":
+#                             continue
+#                         paths.append(output_images_folder + f"{i}.jpg")
+#                         file_names.append(f"{i}.jpg")
+#                         barcodes_decoded.append(result)
+#                     return barcodes_decoded, paths, file_names
+
+#                 barcodes_decoded, paths, file_names = await process_images()
+
+#                 data = {'barcodes_decoded': barcodes_decoded, 'paths': paths, 'file_names': file_names, 'upload_name': upload_name}
+#                 data_for_back = {'barcodes_decoded': barcodes_decoded}
+#                 json_data = json.dumps(data)
+#                 json_data_s = json.dumps(data_for_back)
+
+#                 await loop.run_in_executor(None, save_data, json_data)
+
+#                 return f"<p>{barcodes_decoded}</p><p>{paths}</p><p>{file_names}</p>"
+
+#         return await asyncio.to_thread(process_file, file)
+#     else:
+#         return render_template('upload.html')
+
+# @app.route("/data_upload/", methods=['GET', 'POST'])
+# async def upload_data():
+#     if request.method == 'POST':
+#         upload_name = request.form.get('name')
+#         try:
+#             data = request.get_json()
+#             with open('data.json', 'w') as file:
+#                 json.dump(data, file)
+#             return jsonify({'message': 'Data received and saved'}), 200
+#         except Exception as e:
+#             return jsonify({'error': str(e)}), 400
+#     else:
+#         return render_template('upload-data.html')
+
+# @app.route("/download_file/", methods=['GET'])
+# def download_file():
+#     return send_file("/pdf/2_merged.pdf", as_attachment=True)
+
+# if __name__ == '__main__':
+#     app.run(app.run(host='0.0.0.0', port=8000))
