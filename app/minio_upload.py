@@ -31,8 +31,8 @@ def upload_file(minio_client, bucket_name, folder_path, file_path, object_name):
 
 def v(id, file_path, upload_name, name):
     minio_endpoint = 'minio:9000'
-    minio_access_key = 'cKrvC8E4mbUhH6vuC2dx'
-    minio_secret_key = 'J7UvQS0DzFeGEYzEDA7pflEryoIyGsiHzr8VVU6G'
+    minio_access_key = 'JqoKkI6xEzE9ppuFaPXQ'
+    minio_secret_key = 'bGo2CIsIUoDQX4NTi8aLZwj1o2zlehsqyDmSPyHU'
     minio_bucket_name = upload_name
     folder_path = str(id)
 

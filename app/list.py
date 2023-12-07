@@ -56,9 +56,9 @@ upload_name = input_data['upload_name']
 
 
 minio_endpoint = 'minio:9000'
-minio_access_key = 'cKrvC8E4mbUhH6vuC2dx'
+minio_access_key = 'JqoKkI6xEzE9ppuFaPXQ'
 minio_bucket_name = upload_name
-minio_secret_key = 'J7UvQS0DzFeGEYzEDA7pflEryoIyGsiHzr8VVU6G'
+minio_secret_key = 'bGo2CIsIUoDQX4NTi8aLZwj1o2zlehsqyDmSPyHUs'
 download_folder = f'/making/{minio_bucket_name}/'
 
 if not os.path.exists(download_folder):
